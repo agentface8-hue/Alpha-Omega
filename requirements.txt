@@ -1,0 +1,10 @@
+langgraph
+langchain
+langchain-openai
+langchain-anthropic
+pydantic
+pandas
+numpy
+yfinance
+python-dotenv
+termcolor
