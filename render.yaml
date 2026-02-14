@@ -1,0 +1,13 @@
+# Render.com blueprint: Alpha-Omega backend API
+# https://render.com/docs/blueprint-spec
+services:
+  - type: web
+    name: alpha-omega-api
+    runtime: python
+    region: oregon
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn backend.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11"
+      # Add in Render dashboard: GOOGLE_API_KEY (and others if using real agents)

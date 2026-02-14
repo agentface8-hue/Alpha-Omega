@@ -3,8 +3,11 @@ langchain
 langchain-openai
 langchain-anthropic
 pydantic
+pydantic-settings
 pandas
 numpy
 yfinance
 python-dotenv
 termcolor
+fastapi
+uvicorn

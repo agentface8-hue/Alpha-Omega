@@ -39,6 +39,9 @@ env/
 *.swp
 *.swo
 
+# Data (SQLite, runtime)
+data/
+
 # Logs
 run.log
 logs/

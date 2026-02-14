@@ -22,19 +22,31 @@ class MacroStrategistAgent(BaseAgent):
             import yfinance as yf
             tickers = {
                 "10Y_Yield": "^TNX",
-                "2Y_Yield": "^IRX", # Approximate/proxy if 2Y not available directly, or use ^FVX (5Y). Using IRX (13 week) as proxy for short term for now or just mocked if needed. Actually ^IRX is 13 week. ^FVX is 5 year. 
-                # Let's use ^TNX (10Y) and ^VIX. 2Y is often not free on Yahoo.
+                "2Y_Yield": "^IRX", # Approximate/proxy if 2Y not available directly
                 "VIX": "^VIX"
             }
             
             data = {}
             for key, symbol in tickers.items():
-                ticker = yf.Ticker(symbol)
-                hist = ticker.history(period="1d")
-                if not hist.empty:
-                    data[key] = hist['Close'].iloc[-1]
-                else:
-                    data[key] = "N/A"
+                try:
+                    ticker = yf.Ticker(symbol)
+                    hist = ticker.history(period="1d")
+                    if not hist.empty:
+                        # Yahoo Finance usually provides yields as index values (e.g. 4.5 for 4.5%)
+                        data[key] = hist['Close'].iloc[-1]
+                    else:
+                        data[key] = 0.0 # Default to 0.0 instead of "N/A" to allow math
+                except Exception as e:
+                    print(f"Warning: Could not fetch {key}: {e}")
+                    data[key] = 0.0
+
+            # Calculate Yield Curve (10Y - 2Y)
+            # Note: ^IRX is 13-week T-Bill, used here as short-term proxy if 2Y unavail.
+            # ideally we'd want ^FVX (5Y) or actual 2Y. Assuming data[key] are floats.
+            try:
+                data['Yield_Curve'] = data.get('10Y_Yield', 0.0) - data.get('2Y_Yield', 0.0)
+            except Exception:
+                data['Yield_Curve'] = 0.0
             
             # Contextual data (mocked for things YF doesn't have easily)
             data["Fed_Policy"] = "Data Dependent" 
@@ -43,7 +55,15 @@ class MacroStrategistAgent(BaseAgent):
             return data
         except Exception as e:
             print(f"Error fetching macro data: {e}")
-            return {}
+            # Return safe defaults to prevent downstream crashes
+            return {
+                "10Y_Yield": 0.0,
+                "2Y_Yield": 0.0,
+                "VIX": 0.0,
+                "Yield_Curve": 0.0,
+                "Fed_Policy": "Unknown",
+                "Geopolitics": "Unknown"
+            }
 
     def execute(self, task: str, context: Optional[Dict[str, Any]] = None) -> str:
         """

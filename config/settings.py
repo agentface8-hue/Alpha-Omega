@@ -1,7 +1,20 @@
 import os
 from typing import Optional, Dict, Any
-from pydantic import Field
+from pydantic import Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+
+def _coerce_bool(v: Any) -> bool:
+    """Coerce env values like 'WARN', '1', 'true' to bool so Settings always loads."""
+    if isinstance(v, bool):
+        return v
+    if v is None:
+        return False
+    s = str(v).strip().upper()
+    if s in ("1", "TRUE", "YES", "ON"):
+        return True
+    return False  # "WARN", "0", "FALSE", etc.
+
 
 class Settings(BaseSettings):
     """Global configuration settings for Alpha-Omega."""
@@ -10,6 +23,11 @@ class Settings(BaseSettings):
     PROJECT_NAME: str = "Alpha-Omega System"
     VERSION: str = "0.1.0"
     DEBUG: bool = Field(default=False, description="Enable debug mode")
+
+    @field_validator("DEBUG", mode="before")
+    @classmethod
+    def coerce_debug(cls, v: Any) -> bool:
+        return _coerce_bool(v)
 
     # API Keys
     OPENAI_API_KEY: Optional[str] = Field(default=None, description="OpenAI API Key")
