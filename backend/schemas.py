@@ -26,3 +26,10 @@ class ScanResponse(BaseModel):
     vix_estimate: float = 0
     results: List[Dict[str, Any]] = []
     error: Optional[str] = None
+
+
+class BacktestRequest(BaseModel):
+    symbols: List[str]
+    lookback_days: int = 120
+    forward_days: int = 15
+    sample_every: int = 5

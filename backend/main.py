@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from backend.schemas import AnalysisRequest, AnalysisResponse, ScanRequest, ScanResponse
+from backend.schemas import AnalysisRequest, AnalysisResponse, ScanRequest, ScanResponse, BacktestRequest
 import traceback
 import random
 import time
@@ -194,3 +194,26 @@ async def get_watchlist(name: str):
     from core.watchlists import get_watchlist as gw
     wl = gw(name)
     return {"name": name, "label": wl["label"], "tickers": wl["tickers"]}
+
+
+@app.post("/api/backtest")
+async def run_backtest_endpoint(request: BacktestRequest):
+    """Walk-forward backtest: score historical data, check if TP1 was hit."""
+    try:
+        symbols = [s.upper().strip() for s in request.symbols if s.strip()]
+        if not symbols:
+            raise HTTPException(status_code=400, detail="No symbols provided")
+        if len(symbols) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 tickers per backtest")
+        from core.backtester import run_backtest
+        result = run_backtest(
+            symbols, request.lookback_days, request.forward_days, request.sample_every
+        )
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
