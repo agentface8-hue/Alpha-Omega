@@ -101,10 +101,8 @@ def score_ticker(data: Dict[str, Any], regime: Dict[str, Any]) -> Dict[str, Any]
         caps.append(65)
         ta_notes.append("Inside cloud → cap 65%")
     elif cloud_pos == "below":
-        hard_fail = True
-        hard_fail_reason = "Below Ichimoku cloud → HARD FAIL"
-        return _build_result(data, regime, 0, {"p1": 0, "p2": 0, "p3": 0, "p4": 0, "p5": 0},
-                             True, hard_fail_reason, ta_notes)
+        caps.append(45)
+        ta_notes.append("Below Ichimoku cloud → cap 45%")
 
     p1 = max(0, min(100, p1))
 
@@ -157,13 +155,18 @@ def score_ticker(data: Dict[str, Any], regime: Dict[str, Any]) -> Dict[str, Any]
     # ══════════════════════════════════════════════════
     # P4 — Risk/Reward Geometry (20%)
     # ══════════════════════════════════════════════════
-    if rr < min_rr:
+    if rr < 1.5:
         hard_fail = True
-        hard_fail_reason = f"R:R {rr}:1 below regime min {min_rr}:1 → INSTANT FAIL"
+        hard_fail_reason = f"R:R {rr}:1 below absolute min 1.5:1 → INSTANT FAIL"
         return _build_result(data, regime, 0, {"p1": p1, "p2": p2, "p3": p3, "p4": 0, "p5": 0},
                              True, hard_fail_reason, ta_notes)
 
-    p4 = 90 if rr >= 3.0 else 80 if rr >= 2.5 else 70 if rr >= 2.0 else 50
+    if rr < min_rr:
+        p4 = 40
+        caps.append(55)
+        ta_notes.append(f"R:R {rr}:1 below regime min {min_rr}:1 → P4 weak, cap 55%")
+    else:
+        p4 = 90 if rr >= 3.0 else 80 if rr >= 2.5 else 70 if rr >= 2.0 else 50
 
     # ══════════════════════════════════════════════════
     # P5 — Catalyst & Timing (10%)
@@ -243,6 +246,7 @@ def _build_result(data: Dict, regime: Dict, conviction: int, pillars: Dict,
         "confluence_zones": data.get("confluence_zones", []),
         "fvg_zones": [],
         "ta_note": " · ".join(ta_notes) if ta_notes else f"TAS {data.get('tas','?')}. RSI {data.get('rsi',50)}.",
+        "rr": data.get("rr", 0),
         "plan": "",
         "rsi": data.get("rsi", 50),
     }

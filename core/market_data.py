@@ -245,7 +245,7 @@ def fetch_market_regime() -> Dict[str, Any]:
             regime = "High-Vol Event"
         elif vix_close > 25:
             regime = "Trending Bear"
-        elif vix_close > 18:
+        elif vix_close > 20:
             regime = "Choppy / Range"
         else:
             regime = "Trending Bull"

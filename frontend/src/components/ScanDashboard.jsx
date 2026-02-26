@@ -161,7 +161,7 @@ const ScanDashboard = () => {
                           </div>
                         </div>
                       </td>
-                      <td style={td}><div style={{ fontWeight:"bold", fontSize:13 }}>{isHF ? "—" : `$${r.last_close}`}</div><div style={{ fontSize:9, color:"#2a4a5a", fontFamily:"sans-serif" }}>{r.last_date}</div></td>
+                      <td style={td}><div style={{ fontWeight:"bold", fontSize:13 }}>{r.last_close ? `$${r.last_close}` : "—"}</div><div style={{ fontSize:9, color:"#2a4a5a", fontFamily:"sans-serif" }}>{r.last_date}</div></td>
                       <td style={{...td, fontFamily:"sans-serif", fontSize:11, color:"#4a6070"}}>{r.mkt_cap_b ? `$${r.mkt_cap_b}B` : "—"}</td>
                       <td style={td}>{isHF ? <div><span style={{ color:"#ff4466", fontSize:11, fontWeight:"bold" }}>HARD FAIL</span><div style={{ color:"#ff4466", fontSize:9, fontFamily:"sans-serif", maxWidth:130, whiteSpace:"normal", lineHeight:1.4 }}>{r.hard_fail_reason}</div></div> : <div><span style={{ color:convColor(r.conviction_pct), fontWeight:"bold", fontSize:15 }}>{convIcon(r.conviction_pct)} {r.conviction_pct}%</span><PillarBar scores={r.pillar_scores} /></div>}</td>
                       <td style={td}><span style={{ background:hc.bg, color:hc.fg, border:`1px solid ${hc.border}`, fontSize:10, fontWeight:"bold", padding:"3px 8px", borderRadius:3, fontFamily:"sans-serif" }}>{r.heat}</span></td>
@@ -169,11 +169,11 @@ const ScanDashboard = () => {
                       <td style={td}><span style={{ fontSize:10, fontFamily:"sans-serif", fontWeight:"bold", color:maColor(r.ma150_position), background:`${maColor(r.ma150_position)}15`, border:`1px solid ${maColor(r.ma150_position)}33`, padding:"2px 7px", borderRadius:3 }}>{(r.ma150_position||"—").toUpperCase()}</span></td>
                       <td style={td}><span style={{ color:trendColor(r.trend), fontWeight:"bold", fontSize:12, fontFamily:"sans-serif" }}>{r.trend}</span></td>
                       <td style={td}>{r.vol_direction ? <span style={{ fontSize:9, fontFamily:"sans-serif", fontWeight:"bold", color:volDirColor(r.vol_direction), background:`${volDirColor(r.vol_direction)}10`, border:`1px solid ${volDirColor(r.vol_direction)}30`, padding:"2px 5px", borderRadius:3 }}>{r.vol_direction==="ACCUMULATION"?"ACCUM":r.vol_direction==="DISTRIBUTION"?"DIST":r.vol_direction}</span> : "—"}</td>
-                      <td style={{...td, color:"#c9d8e8", fontSize:12}}>{isHF ? "—" : `$${r.entry_low}–$${r.entry_high}`}</td>
-                      <td style={{...td, color:"#ff4466", fontWeight:"bold", fontSize:12}}>{isHF ? "—" : `$${r.sl}`}</td>
-                      <td style={{...td, color:"#00ff88", fontWeight:"bold", fontSize:12}}>{isHF ? "—" : `$${r.tp1}`}</td>
-                      <td style={{...td, color:"#00d4ff", fontSize:12}}>{isHF ? "—" : `$${r.tp2}`}</td>
-                      <td style={{...td, color:"#c084fc", fontWeight:"bold", fontSize:13}}>{isHF ? "—" : r.qty}</td>
+                      <td style={{...td, color:"#c9d8e8", fontSize:12}}>{r.entry_low ? `$${r.entry_low}–$${r.entry_high}` : "—"}</td>
+                      <td style={{...td, color:"#ff4466", fontWeight:"bold", fontSize:12}}>{r.sl ? `$${r.sl}` : "—"}</td>
+                      <td style={{...td, color:"#00ff88", fontWeight:"bold", fontSize:12}}>{r.tp1 ? `$${r.tp1}` : "—"}</td>
+                      <td style={{...td, color:"#00d4ff", fontSize:12}}>{r.tp2 ? `$${r.tp2}` : "—"}</td>
+                      <td style={{...td, color:"#c084fc", fontWeight:"bold", fontSize:13}}>{r.qty || "—"}</td>
                       <td style={{...td, color:r.vol_ratio>2?"#fbbf24":r.vol_ratio>1.5?"#00ff88":"#94a3b8", fontFamily:"sans-serif", fontSize:12}}>{r.vol_ratio ? `×${r.vol_ratio}` : "—"}</td>
                       <td style={{...td, color:r.earnings_warning?.includes("⚠")?"#ff4466":"#4a6070", fontFamily:"sans-serif", fontSize:10}}>{r.earnings_warning}</td>
                       <td style={{...td, fontSize:10, color:"#4a6070", maxWidth:200, whiteSpace:"normal", fontFamily:"sans-serif", lineHeight:1.5}}>{r.ta_note}</td>
