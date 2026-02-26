@@ -6,6 +6,7 @@ import LiveTicker from './components/LiveTicker';
 import TopStocks from './components/TopStocks';
 import ScanDashboard from './components/ScanDashboard';
 import BacktestDashboard from './components/BacktestDashboard';
+import SignalTracker from './components/SignalTracker';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
@@ -137,6 +138,9 @@ const App = () => {
         <button onClick={() => setActiveTab('backtest')} style={{ background:activeTab==='backtest'?"#0d1a2a":"transparent", color:activeTab==='backtest'?"#a855f7":"#4a6070", border:"none", borderBottom:activeTab==='backtest'?"2px solid #a855f7":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
           <BarChart3 size={14} /> BACKTESTER
         </button>
+        <button onClick={() => setActiveTab('tracker')} style={{ background:activeTab==='tracker'?"#0d1a2a":"transparent", color:activeTab==='tracker'?"#c084fc":"#4a6070", border:"none", borderBottom:activeTab==='tracker'?"2px solid #c084fc":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
+          <Activity size={14} /> SIGNAL TRACKER
+        </button>
       </div>
 
       {/* Content */}
@@ -144,6 +148,8 @@ const App = () => {
         <ScanDashboard />
       ) : activeTab === 'backtest' ? (
         <BacktestDashboard />
+      ) : activeTab === 'tracker' ? (
+        <SignalTracker />
       ) : (
       <main className="main-container">
         {/* Search */}

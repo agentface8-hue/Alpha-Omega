@@ -253,3 +253,48 @@ async def reset_calibration():
     from core.calibrator import save_calibration
     save_calibration({"mode": "none", "scale": 1.0, "offset": 0})
     return {"status": "reset", "mode": "none"}
+
+
+# ══════════════════════════════════════════
+# SIGNAL TRACKER ENDPOINTS
+# ══════════════════════════════════════════
+
+@app.get("/api/signals")
+async def get_signals():
+    """Get all signals without price refresh (fast)."""
+    from core.signal_tracker import get_all_signals
+    return get_all_signals()
+
+
+@app.post("/api/signals/check")
+async def check_signals():
+    """Refresh live prices and update P&L / TP / SL status."""
+    from core.signal_tracker import check_signals as cs
+    return cs()
+
+
+@app.post("/api/signals/close/{signal_id}")
+async def close_signal(signal_id: str):
+    """Manually close a signal."""
+    from core.signal_tracker import close_signal as cls
+    result = cls(signal_id)
+    if not result:
+        raise HTTPException(status_code=404, detail="Signal not found")
+    return result
+
+
+@app.post("/api/signals/clear")
+async def clear_signals():
+    """Reset all signals."""
+    from core.signal_tracker import clear_all
+    return clear_all()
+
+
+@app.post("/api/signals/turbo/{symbol}")
+async def turbo_signal(symbol: str, asset_type: str = "stock"):
+    """Launch a turbo scalp signal with tight SL/TP."""
+    from core.signal_tracker import create_turbo_signal
+    result = create_turbo_signal(symbol, asset_type)
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    return result
