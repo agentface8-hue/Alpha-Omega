@@ -5,6 +5,7 @@ import ResultCard from './components/ResultCard';
 import LiveTicker from './components/LiveTicker';
 import TopStocks from './components/TopStocks';
 import ScanDashboard from './components/ScanDashboard';
+import BacktestDashboard from './components/BacktestDashboard';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
@@ -131,13 +132,18 @@ const App = () => {
           <Activity size={14} /> COUNCIL ANALYZE
         </button>
         <button onClick={() => setActiveTab('scan')} style={{ background:activeTab==='scan'?"#0d1a2a":"transparent", color:activeTab==='scan'?"#00d4ff":"#4a6070", border:"none", borderBottom:activeTab==='scan'?"2px solid #00d4ff":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
-          <BarChart3 size={14} /> SWING SCAN v4.3
+          <BarChart3 size={14} /> SWING SCAN v4.4
+        </button>
+        <button onClick={() => setActiveTab('backtest')} style={{ background:activeTab==='backtest'?"#0d1a2a":"transparent", color:activeTab==='backtest'?"#a855f7":"#4a6070", border:"none", borderBottom:activeTab==='backtest'?"2px solid #a855f7":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
+          <BarChart3 size={14} /> BACKTESTER
         </button>
       </div>
 
       {/* Content */}
       {activeTab === 'scan' ? (
         <ScanDashboard />
+      ) : activeTab === 'backtest' ? (
+        <BacktestDashboard />
       ) : (
       <main className="main-container">
         {/* Search */}
