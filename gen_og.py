@@ -5,56 +5,68 @@ W, H = 1200, 630
 img = Image.new('RGB', (W, H), '#080c14')
 draw = ImageDraw.Draw(img)
 
-# Background gradient effect (dark blue strips)
+# Background gradient
 for y in range(H):
-    r = int(8 + (y/H)*4)
-    g = int(12 + (y/H)*6)
-    b = int(20 + (y/H)*12)
+    r = int(8 + (y/H)*5)
+    g = int(12 + (y/H)*8)
+    b = int(20 + (y/H)*16)
     draw.line([(0, y), (W, y)], fill=(r, g, b))
 
-# Border
-draw.rectangle([0, 0, W-1, H-1], outline='#1a2535', width=2)
+# Top accent bar
+draw.rectangle([0, 0, W, 3], fill='#00d4ff')
 
-# Accent line at top
-draw.rectangle([0, 0, W, 4], fill='#00d4ff')
+# Grid lines (subtle)
+for x in range(0, W, 60):
+    draw.line([(x, 0), (x, H)], fill=(15, 25, 40), width=1)
+for y in range(0, H, 60):
+    draw.line([(0, y), (W, y)], fill=(15, 25, 40), width=1)
+
+try:
+    tf = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 72)
+    sf = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 28)
+    df = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 22)
+    bf = ImageFont.truetype("C:/Windows/Fonts/consolab.ttf", 18)
+except:
+    tf = sf = df = bf = ImageFont.load_default()
+
+# Big stylized A logo
+cx, cy = 130, 300
+draw.polygon([(cx-50, cy+60), (cx, cy-70), (cx+50, cy+60)], outline='#00d4ff', width=4)
+draw.line([(cx-30, cy+20), (cx+30, cy+20)], fill='#00d4ff', width=3)
+draw.ellipse([cx-5, cy+55, cx+5, cy+65], fill='#00ff88')
 
 # Title
-try:
-    title_font = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 56)
-    sub_font = ImageFont.truetype("C:/Windows/Fonts/consola.ttf", 24)
-    desc_font = ImageFont.truetype("C:/Windows/Fonts/segoeui.ttf", 22)
-except:
-    title_font = ImageFont.load_default()
-    sub_font = title_font
-    desc_font = title_font
+draw.text((220, 220), "ALPHA-OMEGA", fill='#e2e8f0', font=tf)
+draw.text((220, 310), "Council of Experts Trading System", fill='#4a7a8a', font=sf)
 
-# Logo triangle
-pts = [(80, 340), (120, 260), (160, 340)]
-draw.polygon(pts, outline='#00d4ff', width=3)
-draw.ellipse([110, 320, 130, 340], fill='#00ff88')
+# Divider
+draw.line([(220, 380), (1000, 380)], fill='#1a3050', width=1)
 
-# Title text
-draw.text((190, 260), "ALPHA - OMEGA", fill='#e2e8f0', font=title_font)
-draw.text((190, 330), "Council of Experts Trading System", fill='#4a6a7a', font=sub_font)
-
-# Features
-y_start = 420
-features = [
-    ("SwingTrader AI v4.3", "#00ff88"),
-    ("5-Pillar Conviction Scoring", "#00d4ff"),
-    ("Real-Time Market Data", "#fbbf24"),
-    ("Multi-Agent Analysis", "#a78bfa"),
+# Feature pills
+pills = [
+    ("5-PILLAR SCORING", "#00ff88"),
+    ("REAL-TIME DATA", "#00d4ff"),
+    ("AI COUNCIL", "#a78bfa"),
+    ("TRADE PLANS", "#fbbf24"),
 ]
-x = 80
-for text, color in features:
-    draw.rounded_rectangle([x, y_start, x+250, y_start+36], radius=4, fill='#0d1a2a', outline=color)
-    draw.text((x+12, y_start+6), text, fill=color, font=desc_font)
-    x += 270
+x = 220
+for text, color in pills:
+    tw = len(text) * 11 + 24
+    draw.rounded_rectangle([x, 410, x+tw, 448], radius=6, outline=color, width=1)
+    draw.text((x+12, 416), text, fill=color, font=bf)
+    x += tw + 16
 
-# System online badge
-draw.ellipse([1050, 30, 1060, 40], fill='#00ff88')
-draw.text((1068, 26), "LIVE", fill='#00ff88', font=sub_font)
+# Version badge
+draw.rounded_rectangle([220, 480, 400, 516], radius=4, fill='#0d2030')
+draw.text((232, 486), "SwingTrader v4.3", fill='#00ff88', font=df)
 
-out = os.path.join("C:\\Users\\asus\\Alpha-Omega-System\\frontend\\public", "og-image.png")
-img.save(out, "PNG")
-print(f"Saved: {out}")
+# Live badge
+draw.ellipse([1100, 30, 1112, 42], fill='#00ff88')
+draw.text((1120, 26), "LIVE", fill='#00ff88', font=sf)
+
+# Bottom bar
+draw.rectangle([0, H-3, W, H], fill='#00d4ff')
+
+out = "C:\\Users\\asus\\Alpha-Omega-System\\frontend\\public\\og-image.png"
+img.save(out, "PNG", quality=95)
+print(f"Saved {out}")
