@@ -289,7 +289,7 @@ def run_backtest(symbols: List[str], lookback_days: int = 120, forward_days: int
                     continue
 
                 data["symbol"] = sym
-                scored = score_ticker(data, regime)
+                scored = score_ticker(data, regime, skip_calibration=True)
 
                 if scored.get("hard_fail"):
                     continue  # skip hard fails for accuracy measurement

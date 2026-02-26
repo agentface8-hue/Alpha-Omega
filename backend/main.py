@@ -217,3 +217,39 @@ async def run_backtest_endpoint(request: BacktestRequest):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/calibrate")
+async def run_calibration_endpoint(request: BacktestRequest):
+    """Run auto-calibration: backtest + analyze + compute calibration curve."""
+    try:
+        symbols = [s.upper().strip() for s in request.symbols if s.strip()]
+        if not symbols:
+            raise HTTPException(status_code=400, detail="No symbols provided")
+        from core.calibrator import run_calibration
+        result = run_calibration(
+            symbols, request.lookback_days, request.forward_days, request.sample_every
+        )
+        if "error" in result:
+            raise HTTPException(status_code=500, detail=result["error"])
+        return result
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/calibration")
+async def get_calibration():
+    """Get current calibration parameters."""
+    from core.calibrator import load_calibration
+    return load_calibration()
+
+
+@app.post("/api/calibration/reset")
+async def reset_calibration():
+    """Reset calibration to uncalibrated (raw scores)."""
+    from core.calibrator import save_calibration
+    save_calibration({"mode": "none", "scale": 1.0, "offset": 0})
+    return {"status": "reset", "mode": "none"}

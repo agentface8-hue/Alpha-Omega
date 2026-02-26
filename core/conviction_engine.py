@@ -6,7 +6,7 @@ No LLM calls — deterministic scoring from market data.
 from typing import Dict, Any, List
 
 
-def score_ticker(data: Dict[str, Any], regime: Dict[str, Any]) -> Dict[str, Any]:
+def score_ticker(data: Dict[str, Any], regime: Dict[str, Any], skip_calibration: bool = False) -> Dict[str, Any]:
     if "error" in data:
         return {**data, "hard_fail": True, "hard_fail_reason": data["error"],
                 "conviction_pct": 0, "heat": "Cold", "trend": "MIXED",
@@ -254,6 +254,17 @@ def score_ticker(data: Dict[str, Any], regime: Dict[str, Any]) -> Dict[str, Any]
     conviction = raw_cv
     for cap in caps:
         conviction = min(conviction, cap)
+
+    # Apply calibration if available (skip during backtesting)
+    if not skip_calibration:
+        try:
+            from core.calibrator import apply_calibration
+            calibrated = apply_calibration(conviction)
+            if calibrated != conviction:
+                ta_notes.append(f"Calibrated: {conviction}% → {calibrated}%")
+                conviction = calibrated
+        except Exception:
+            pass  # calibration not available, use raw
 
     return _build_result(data, regime, conviction, pillar_scores, False, "", ta_notes)
 

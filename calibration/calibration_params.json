@@ -1,0 +1,294 @@
+{
+  "mode": "linear",
+  "scale": 0.1803,
+  "offset": 32.14,
+  "mapping": [
+    {
+      "raw_min": 75,
+      "raw_max": 84,
+      "raw_mid": 79.5,
+      "calibrated": 47,
+      "tp1_rate": 28.6,
+      "win_rate": 42.9,
+      "count": 7
+    },
+    {
+      "raw_min": 65,
+      "raw_max": 74,
+      "raw_mid": 69.5,
+      "calibrated": 46,
+      "tp1_rate": 34.0,
+      "win_rate": 47.3,
+      "count": 150
+    },
+    {
+      "raw_min": 60,
+      "raw_max": 64,
+      "raw_mid": 62.0,
+      "calibrated": 44,
+      "tp1_rate": 31.8,
+      "win_rate": 45.5,
+      "count": 22
+    },
+    {
+      "raw_min": 50,
+      "raw_max": 59,
+      "raw_mid": 54.5,
+      "calibrated": 37,
+      "tp1_rate": 26.5,
+      "win_rate": 44.1,
+      "count": 34
+    },
+    {
+      "raw_min": 40,
+      "raw_max": 49,
+      "raw_mid": 44.5,
+      "calibrated": 37,
+      "tp1_rate": 31.6,
+      "win_rate": 36.8,
+      "count": 19
+    }
+  ],
+  "pillar_analysis": {
+    "win_count": 106,
+    "loss_count": 126,
+    "avg_tas": {
+      "wins": 3.41,
+      "losses": 3.32,
+      "delta": 0.09
+    },
+    "avg_rr": {
+      "wins": 2.33,
+      "losses": 3.99,
+      "delta": -1.66
+    },
+    "avg_conviction": {
+      "wins": 64.9,
+      "losses": 63.9,
+      "delta": 1.0
+    },
+    "bull_trend_pct": {
+      "wins": 79.2,
+      "losses": 76.2
+    },
+    "strongest_predictors": []
+  },
+  "thresholds": {
+    "min_conviction_for_85pct": 100,
+    "win_rate_at_cutoff": 0,
+    "tas_win_rates": {
+      "TAS_1": {
+        "count": 28,
+        "win_rate": 39.3
+      },
+      "TAS_2": {
+        "count": 24,
+        "win_rate": 45.8
+      },
+      "TAS_3": {
+        "count": 17,
+        "win_rate": 47.1
+      },
+      "TAS_4": {
+        "count": 163,
+        "win_rate": 46.6
+      }
+    },
+    "rr_win_rates": {
+      "under_2": {
+        "count": 18,
+        "win_rate": 55.6
+      },
+      "2_to_3": {
+        "count": 193,
+        "win_rate": 46.6
+      },
+      "over_3": {
+        "count": 21,
+        "win_rate": 28.6
+      }
+    },
+    "suggested_filters": [
+      "Require TAS >= 3/4 (win rate 47.1%)"
+    ]
+  },
+  "tp_analysis": {
+    "tp_results": [
+      {
+        "tp_pct": 0.5,
+        "hit_rate": 87.5,
+        "hits": 203
+      },
+      {
+        "tp_pct": 1.0,
+        "hit_rate": 79.7,
+        "hits": 185
+      },
+      {
+        "tp_pct": 1.5,
+        "hit_rate": 72.0,
+        "hits": 167
+      },
+      {
+        "tp_pct": 2.0,
+        "hit_rate": 63.8,
+        "hits": 148
+      },
+      {
+        "tp_pct": 2.5,
+        "hit_rate": 61.2,
+        "hits": 142
+      },
+      {
+        "tp_pct": 3.0,
+        "hit_rate": 56.9,
+        "hits": 132
+      },
+      {
+        "tp_pct": 4.0,
+        "hit_rate": 51.3,
+        "hits": 119
+      },
+      {
+        "tp_pct": 5.0,
+        "hit_rate": 46.6,
+        "hits": 108
+      },
+      {
+        "tp_pct": 7.0,
+        "hit_rate": 30.2,
+        "hits": 70
+      },
+      {
+        "tp_pct": 10.0,
+        "hit_rate": 16.4,
+        "hits": 38
+      }
+    ],
+    "best_for_85pct": {
+      "tp_pct": 0.5,
+      "hit_rate": 87.5,
+      "hits": 203
+    },
+    "best_for_70pct": {
+      "tp_pct": 1.5,
+      "hit_rate": 72.0,
+      "hits": 167
+    },
+    "total_signals": 232,
+    "positive_signals": 219
+  },
+  "baseline_stats": {
+    "total_signals": 232,
+    "total_wins": 106,
+    "overall_win_rate": 45.7,
+    "overall_tp1_rate": 32.3,
+    "avg_pnl": 0.86,
+    "best_trade": {
+      "symbol": "AMD",
+      "date": "2025-07-10",
+      "pnl": 16.79
+    },
+    "worst_trade": {
+      "symbol": "TSLA",
+      "date": "2025-06-10",
+      "pnl": -9.11
+    },
+    "symbols_tested": [
+      "AAPL",
+      "NVDA",
+      "MSFT",
+      "GOOGL",
+      "META",
+      "AMZN",
+      "TSLA",
+      "AMD",
+      "CRM",
+      "NFLX"
+    ],
+    "lookback_days": 180,
+    "forward_days": 15
+  },
+  "brackets": [
+    {
+      "label": "85-100%",
+      "min": 85,
+      "max": 100,
+      "count": 0,
+      "wins": 0,
+      "win_rate": 0,
+      "tp1_rate": 0,
+      "tp2_rate": 0,
+      "avg_pnl": 0,
+      "avg_days": 0,
+      "avg_drawdown": 0
+    },
+    {
+      "label": "75-84%",
+      "min": 75,
+      "max": 84,
+      "count": 7,
+      "wins": 3,
+      "win_rate": 42.9,
+      "tp1_rate": 28.6,
+      "tp2_rate": 14.3,
+      "avg_pnl": 1.11,
+      "avg_days": 8.9,
+      "avg_drawdown": -2.81
+    },
+    {
+      "label": "65-74%",
+      "min": 65,
+      "max": 74,
+      "count": 150,
+      "wins": 71,
+      "win_rate": 47.3,
+      "tp1_rate": 34.0,
+      "tp2_rate": 16.0,
+      "avg_pnl": 0.97,
+      "avg_days": 8.4,
+      "avg_drawdown": -3.63
+    },
+    {
+      "label": "60-64%",
+      "min": 60,
+      "max": 64,
+      "count": 22,
+      "wins": 10,
+      "win_rate": 45.5,
+      "tp1_rate": 31.8,
+      "tp2_rate": 18.2,
+      "avg_pnl": 0.23,
+      "avg_days": 8.1,
+      "avg_drawdown": -4.35
+    },
+    {
+      "label": "50-59%",
+      "min": 50,
+      "max": 59,
+      "count": 34,
+      "wins": 15,
+      "win_rate": 44.1,
+      "tp1_rate": 26.5,
+      "tp2_rate": 23.5,
+      "avg_pnl": 0.96,
+      "avg_days": 6.6,
+      "avg_drawdown": -2.5
+    },
+    {
+      "label": "40-49%",
+      "min": 40,
+      "max": 49,
+      "count": 19,
+      "wins": 7,
+      "win_rate": 36.8,
+      "tp1_rate": 31.6,
+      "tp2_rate": 15.8,
+      "avg_pnl": 0.48,
+      "avg_days": 5.6,
+      "avg_drawdown": -3.16
+    }
+  ],
+  "total_signals": 232,
+  "updated_at": "2026-02-26T17:31:52.716265"
+}
