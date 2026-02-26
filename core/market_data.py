@@ -133,6 +133,41 @@ def fetch_ticker_data(symbol: str) -> Dict[str, Any]:
         last3_rngs = [float(daily["High"].iloc[-i] - daily["Low"].iloc[-i]) for i in range(1, 4)]
         coiling = all(r < float(avg_rng10) * 0.5 for r in last3_rngs)
 
+        # ── NEW: Coiling 3 vs 5 candle ──
+        coil_data = _coiling_check(daily)
+
+        # ── NEW: Linear Regression Channel ──
+        lr_channel = _linear_regression_channel(daily, 100)
+
+        # ── NEW: Fair Value Gaps ──
+        fvg_zones = _fair_value_gaps(daily, 50)
+
+        # ── NEW: Volume Profile / POC ──
+        vol_profile = _volume_profile_poc(daily, 50)
+
+        # ── NEW: 65m Sustained Bull Check ──
+        sustained_65m = _sustained_65m_check(hourly, 3)
+
+        # ── NEW: Expanded confluence (Fib + FVG + Channel -2σ + POC) ──
+        all_support_levels = list(confluence_zones)
+        if lr_channel["lower_2sd"] > 0:
+            all_support_levels.append(lr_channel["lower_2sd"])
+        if vol_profile["poc"] > 0:
+            all_support_levels.append(vol_profile["poc"])
+        for fvg in fvg_zones:
+            if fvg["type"] == "bullish":
+                all_support_levels.append(fvg["top"])
+        expanded_confluence = []
+        for lvl in all_support_levels:
+            overlap_count = 0
+            for other in all_support_levels:
+                if lvl != other and abs(lvl - other) / max(lvl, 0.01) < 0.005:
+                    overlap_count += 1
+            if overlap_count >= 1:
+                expanded_confluence.append(round(lvl, 2))
+        expanded_confluence = sorted(set(expanded_confluence))[:6]
+        near_confluence = any(abs(close - z) / close < 0.005 for z in expanded_confluence) if expanded_confluence else False
+
         # Ichimoku cloud
         tenkan = (daily["High"].rolling(9).max() + daily["Low"].rolling(9).min()) / 2
         kijun = (daily["High"].rolling(26).max() + daily["Low"].rolling(26).min()) / 2
@@ -223,6 +258,14 @@ def fetch_ticker_data(symbol: str) -> Dict[str, Any]:
             "bull_body": bull_body,
             "entry_low": round(close * 0.99, 2),
             "entry_high": round(close * 1.005, 2),
+            # NEW v4.4 indicators
+            "lr_channel": lr_channel,
+            "fvg_zones": fvg_zones,
+            "vol_profile": vol_profile,
+            "sustained_65m": sustained_65m,
+            "coil_data": coil_data,
+            "expanded_confluence": expanded_confluence,
+            "near_confluence": near_confluence,
         }
     except Exception as e:
         return {"error": str(e), "symbol": symbol}
@@ -289,3 +332,112 @@ def fetch_multiple_tickers(symbols: List[str]) -> List[Dict[str, Any]]:
         data = fetch_ticker_data(sym)
         results.append(data)
     return results
+
+
+def _linear_regression_channel(daily: pd.DataFrame, period: int = 100) -> Dict[str, Any]:
+    """100-period Linear Regression Channel with ±2 StdDev bands."""
+    try:
+        closes = daily["Close"].tail(period).values
+        if len(closes) < period:
+            return {"lower_2sd": 0, "upper_2sd": 0, "midline": 0, "at_lower": False}
+        x = np.arange(len(closes))
+        slope, intercept = np.polyfit(x, closes, 1)
+        fitted = slope * x + intercept
+        residuals = closes - fitted
+        std = np.std(residuals)
+        midline = float(fitted[-1])
+        lower_2sd = round(midline - 2 * std, 2)
+        upper_2sd = round(midline + 2 * std, 2)
+        current = float(closes[-1])
+        at_lower = current <= lower_2sd * 1.005  # within 0.5% of -2sd
+        return {"lower_2sd": lower_2sd, "upper_2sd": upper_2sd, "midline": round(midline, 2), "at_lower": at_lower}
+    except Exception:
+        return {"lower_2sd": 0, "upper_2sd": 0, "midline": 0, "at_lower": False}
+
+
+def _fair_value_gaps(daily: pd.DataFrame, lookback: int = 50) -> List[Dict[str, float]]:
+    """Find Fair Value Gaps (FVG) — bullish gaps where candle[i] high < candle[i+2] low."""
+    fvgs = []
+    data = daily.tail(lookback)
+    if len(data) < 3:
+        return fvgs
+    highs = data["High"].values
+    lows = data["Low"].values
+    closes = data["Close"].values
+    for i in range(len(data) - 2):
+        # Bullish FVG: candle i high < candle i+2 low (gap up)
+        if highs[i] < lows[i + 2]:
+            fvgs.append({"top": round(float(lows[i + 2]), 2), "bottom": round(float(highs[i]), 2), "type": "bullish"})
+        # Bearish FVG: candle i low > candle i+2 high (gap down)
+        if lows[i] > highs[i + 2]:
+            fvgs.append({"top": round(float(lows[i]), 2), "bottom": round(float(highs[i + 2]), 2), "type": "bearish"})
+    # Keep only recent unfilled gaps near current price
+    current = float(closes[-1])
+    relevant = [g for g in fvgs if abs(g["top"] - current) / current < 0.05 or abs(g["bottom"] - current) / current < 0.05]
+    return relevant[-6:]  # max 6 most recent
+
+
+def _volume_profile_poc(daily: pd.DataFrame, lookback: int = 50) -> Dict[str, Any]:
+    """Calculate Point of Control — price level with highest traded volume."""
+    try:
+        data = daily.tail(lookback)
+        if len(data) < 10:
+            return {"poc": 0, "high_vol_nodes": []}
+        lows = data["Low"].values
+        highs = data["High"].values
+        volumes = data["Volume"].values
+        # Create price bins
+        price_min = float(np.min(lows))
+        price_max = float(np.max(highs))
+        num_bins = 50
+        bins = np.linspace(price_min, price_max, num_bins + 1)
+        vol_at_price = np.zeros(num_bins)
+        for i in range(len(data)):
+            lo, hi, vol = float(lows[i]), float(highs[i]), float(volumes[i])
+            for b in range(num_bins):
+                if bins[b + 1] >= lo and bins[b] <= hi:
+                    overlap = min(hi, float(bins[b + 1])) - max(lo, float(bins[b]))
+                    total_range = hi - lo if hi > lo else 1
+                    vol_at_price[b] += vol * (overlap / total_range)
+        poc_idx = np.argmax(vol_at_price)
+        poc = round((float(bins[poc_idx]) + float(bins[poc_idx + 1])) / 2, 2)
+        # High volume nodes (top 3 besides POC)
+        sorted_idx = np.argsort(vol_at_price)[::-1]
+        hvn = []
+        for idx in sorted_idx[1:4]:
+            hvn.append(round((float(bins[idx]) + float(bins[idx + 1])) / 2, 2))
+        return {"poc": poc, "high_vol_nodes": hvn}
+    except Exception:
+        return {"poc": 0, "high_vol_nodes": []}
+
+
+def _sustained_65m_check(hourly: pd.DataFrame, min_candles: int = 3) -> Dict[str, Any]:
+    """Check if 65m (hourly) BULL trend sustained for N consecutive candles."""
+    try:
+        if hourly.empty or len(hourly) < 20:
+            return {"sustained": False, "bull_candles": 0}
+        ema20 = hourly["Close"].ewm(span=20).mean()
+        # Check last N candles all above EMA20
+        count = 0
+        for i in range(1, min(len(hourly), 10) + 1):
+            idx = -i
+            if float(hourly["Close"].iloc[idx]) > float(ema20.iloc[idx]):
+                count += 1
+            else:
+                break
+        return {"sustained": count >= min_candles, "bull_candles": count}
+    except Exception:
+        return {"sustained": False, "bull_candles": 0}
+
+
+def _coiling_check(daily: pd.DataFrame) -> Dict[str, Any]:
+    """Check both 3-candle and 5-candle contraction patterns."""
+    try:
+        avg_rng10 = float(daily["High"].tail(10).sub(daily["Low"].tail(10)).mean())
+        threshold = avg_rng10 * 0.5
+        last5 = [float(daily["High"].iloc[-i] - daily["Low"].iloc[-i]) for i in range(1, 6)]
+        coil3 = all(r < threshold for r in last5[:3])
+        coil5 = all(r < threshold for r in last5)
+        return {"coil3": coil3, "coil5": coil5, "tightest": "5-bar" if coil5 else "3-bar" if coil3 else "none"}
+    except Exception:
+        return {"coil3": False, "coil5": False, "tightest": "none"}
