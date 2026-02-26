@@ -26,6 +26,8 @@ const SignalTracker = () => {
   const [turboLoading, setTurboLoading] = useState(false);
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [countdown, setCountdown] = useState(30);
+  const [autopilotLoading, setAutopilotLoading] = useState(false);
+  const [autopilotResult, setAutopilotResult] = useState(null);
   const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
   const fetchSignals = async (refresh = false) => {
@@ -63,6 +65,19 @@ const SignalTracker = () => {
       else { setTurboTicker(''); fetchSignals(true); }
     } catch (e) { alert(e.message); }
     setTurboLoading(false);
+  };
+
+  const runAutopilot = async () => {
+    setAutopilotLoading(true); setAutopilotResult(null);
+    try {
+      const res = await fetch(`${apiUrl}/api/autopilot`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      setAutopilotResult(d);
+      setAutoRefresh(true);
+      fetchSignals(true);
+    } catch (e) { alert('Autopilot error: ' + e.message); }
+    setAutopilotLoading(false);
   };
 
   // Auto-refresh every 30 seconds
@@ -121,6 +136,47 @@ const SignalTracker = () => {
           </button>
           {autoRefresh && <span style={{ fontSize:11, color:"#00ff88", fontFamily:"monospace", fontWeight:"bold", minWidth:30 }}>{countdown}s</span>}
         </div>
+      </div>
+
+      {/* Auto-Pilot */}
+      <div style={{ background:"linear-gradient(135deg, rgba(0,212,255,0.06), rgba(124,58,237,0.06))", border:"1px solid #7c3aed44", borderRadius:10, padding:16, marginBottom:16 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+          <div>
+            <div style={{ fontSize:14, fontWeight:"bold", color:"#e0e0e0", fontFamily:"sans-serif" }}>🤖 AUTO-PILOT</div>
+            <div style={{ fontSize:10, color:"#4a6070", fontFamily:"sans-serif", marginTop:2 }}>Scans 30 stocks → Ranks by conviction → Launches top 10 turbo signals</div>
+          </div>
+          <button onClick={runAutopilot} disabled={autopilotLoading}
+            style={{ background:autopilotLoading?"#1a2535":"linear-gradient(135deg, #00d4ff, #7c3aed)", border:"none", borderRadius:8, padding:"12px 28px", color:"#fff", fontSize:14, fontWeight:"bold", fontFamily:"sans-serif", cursor:autopilotLoading?"wait":"pointer", letterSpacing:1, boxShadow:autopilotLoading?"none":"0 0 20px rgba(124,58,237,0.3)" }}>
+            {autopilotLoading ? "⏳ SCANNING 30 STOCKS..." : "🚀 LAUNCH AUTO-PILOT"}
+          </button>
+        </div>
+
+        {/* Autopilot Results */}
+        {autopilotResult && (
+          <div style={{ marginTop:14, background:"#0a0f18", borderRadius:8, padding:12 }}>
+            <div style={{ display:"flex", gap:16, flexWrap:"wrap", marginBottom:10 }}>
+              <span style={{ fontSize:11, color:"#4a6070", fontFamily:"sans-serif" }}>Scanned: <b style={{color:"#e0e0e0"}}>{autopilotResult.scanned}</b></span>
+              <span style={{ fontSize:11, color:"#4a6070", fontFamily:"sans-serif" }}>Passed: <b style={{color:"#00ff88"}}>{autopilotResult.passed_filter}</b></span>
+              <span style={{ fontSize:11, color:"#4a6070", fontFamily:"sans-serif" }}>Launched: <b style={{color:"#c084fc"}}>{autopilotResult.launched?.length || 0}</b></span>
+              <span style={{ fontSize:11, color:"#4a6070", fontFamily:"sans-serif" }}>Regime: <b style={{color:"#fbbf24"}}>{autopilotResult.market_regime}</b></span>
+            </div>
+            {autopilotResult.launched?.length > 0 && (
+              <div style={{ display:"flex", gap:6, flexWrap:"wrap" }}>
+                {autopilotResult.launched.map(l => (
+                  <div key={l.ticker} style={{ background:"rgba(0,255,136,0.08)", border:"1px solid #00ff8833", borderRadius:6, padding:"6px 10px", textAlign:"center" }}>
+                    <div style={{ fontSize:12, fontWeight:"bold", color:"#00ff88" }}>{l.ticker}</div>
+                    <div style={{ fontSize:9, color:"#4a6070" }}>{l.conviction}% · ${l.entry}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {autopilotResult.skipped?.length > 0 && (
+              <div style={{ marginTop:8, fontSize:10, color:"#4a6070", fontFamily:"sans-serif" }}>
+                Skipped: {autopilotResult.skipped.map(s => `${s.ticker} (${s.reason})`).join(', ')}
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Stats Cards */}

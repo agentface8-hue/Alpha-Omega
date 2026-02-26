@@ -110,7 +110,13 @@ def check_signals() -> Dict[str, Any]:
         lookup = f"{sym}-USD" if s["asset_type"] == "crypto" and not sym.endswith("-USD") else sym
         price = prices.get(lookup, s["current_price"])
         s["current_price"] = round(price, 4)
-        s["bars_held"] += 1
+
+        # Calculate actual days held from entry time
+        try:
+            entry_dt = datetime.datetime.fromisoformat(s["entry_time"])
+            s["bars_held"] = (datetime.datetime.utcnow() - entry_dt).days
+        except Exception:
+            pass
 
         # Track high/low watermarks
         if price > s["highest_price"]:

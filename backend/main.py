@@ -298,3 +298,70 @@ async def turbo_signal(symbol: str, asset_type: str = "stock"):
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+@app.post("/api/autopilot")
+async def run_autopilot(top_n: int = 10, watchlist: str = "full_scan"):
+    """
+    AUTO-PILOT: Scan universe → rank by conviction → launch turbo signals for top N.
+    One button to rule them all.
+    """
+    try:
+        from agents.swing_scanner import SwingScanner
+        from core.signal_tracker import create_turbo_signal, get_all_signals
+        from core.watchlists import get_watchlist
+
+        # Step 1: Get universe
+        wl = get_watchlist(watchlist)
+        symbols = wl["tickers"]
+
+        # Step 2: Scan all
+        scanner = SwingScanner()
+        scan_result = scanner.scan(symbols)
+        results = scan_result.get("results", [])
+
+        # Step 3: Filter and rank
+        valid = [r for r in results if not r.get("hard_fail") and r.get("conviction_pct", 0) > 0]
+        ranked = sorted(valid, key=lambda x: x.get("conviction_pct", 0), reverse=True)
+        top = ranked[:top_n]
+
+        # Step 4: Get existing active tickers to avoid duplicates
+        existing = get_all_signals()
+        active_tickers = {s["ticker"] for s in existing.get("active", [])}
+
+        # Step 5: Launch turbo signals
+        launched = []
+        skipped = []
+        for r in top:
+            ticker = r["ticker"]
+            if ticker in active_tickers:
+                skipped.append({"ticker": ticker, "reason": "already active"})
+                continue
+            sig = create_turbo_signal(ticker)
+            if "error" not in sig:
+                launched.append({
+                    "ticker": ticker,
+                    "conviction": r.get("conviction_pct", 0),
+                    "heat": r.get("heat", ""),
+                    "entry": sig.get("entry_price", 0),
+                    "sl": sig.get("sl", 0),
+                    "tp1": sig.get("tp1", 0),
+                })
+                active_tickers.add(ticker)
+            else:
+                skipped.append({"ticker": ticker, "reason": sig["error"]})
+
+        return {
+            "status": "ok",
+            "scanned": len(symbols),
+            "passed_filter": len(valid),
+            "launched": launched,
+            "skipped": skipped,
+            "top_ranked": [{"ticker": r["ticker"], "conviction": r.get("conviction_pct",0),
+                           "heat": r.get("heat",""), "tas": r.get("tas","")} for r in top],
+            "market_regime": scan_result.get("market_regime", ""),
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
