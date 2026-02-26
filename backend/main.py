@@ -100,8 +100,16 @@ async def analyze_stock(request: AnalysisRequest):
                 full_report=context.get("reports", {}),
             )
         except Exception as real_err:
-            print(f"[DEMO MODE] Real analysis failed ({real_err}), using demo data.")
-            return get_demo_response(symbol)
+            print(f"[V2 FAILED] {real_err}, falling back to smart_analyze...")
+            try:
+                from core.smart_analyze import analyze
+                result = analyze(symbol)
+                if "error" in result:
+                    return get_demo_response(symbol)
+                return AnalysisResponse(**result)
+            except Exception as sa_err:
+                print(f"[SMART FAILED] {sa_err}, using demo data.")
+                return get_demo_response(symbol)
 
     except Exception as e:
         traceback.print_exc()
