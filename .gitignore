@@ -41,6 +41,8 @@ env/
 
 # Data (SQLite, runtime)
 data/
+journal/
+create_table.py
 
 # Logs
 run.log

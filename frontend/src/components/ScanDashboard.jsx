@@ -54,6 +54,20 @@ const ScanDashboard = () => {
   const [data, setData] = useState(null);
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(new Set());
+  const [watchlists, setWatchlists] = useState(null);
+
+  // Fetch watchlists on mount
+  React.useEffect(() => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    fetch(`${apiUrl}/api/watchlists`).then(r => r.json()).then(d => setWatchlists(d.watchlists)).catch(() => {});
+  }, []);
+
+  const loadWatchlist = async (name) => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    const res = await fetch(`${apiUrl}/api/watchlists/${name}`);
+    const d = await res.json();
+    setTickers(d.tickers.join(', '));
+  };
 
   const runScan = async () => {
     setLoading(true);
@@ -106,6 +120,19 @@ const ScanDashboard = () => {
           </div>
         )}
       </div>
+
+      {/* Watchlist Quick-Select */}
+      {watchlists && (
+        <div style={{ display:"flex", gap:6, marginBottom:10, flexWrap:"wrap" }}>
+          {Object.entries(watchlists).map(([k, v]) => (
+            <button key={k} onClick={() => loadWatchlist(k)}
+              style={{ background:"#0d1520", border:"1px solid #1a2535", borderRadius:4, padding:"4px 10px", color:"#7ee8ff", fontSize:10, fontFamily:"sans-serif", cursor:"pointer", transition:"all 0.2s" }}
+              onMouseOver={e => { e.target.style.background="#1a2535"; e.target.style.borderColor="#7ee8ff"; }}
+              onMouseOut={e => { e.target.style.background="#0d1520"; e.target.style.borderColor="#1a2535"; }}
+            >{v.label} ({v.count})</button>
+          ))}
+        </div>
+      )}
 
       {/* Ticker input */}
       <div style={{ display:"flex", gap:10, marginBottom:14 }}>

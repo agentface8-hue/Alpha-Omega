@@ -118,12 +118,19 @@ async def scan_stocks(request: ScanRequest):
         symbols = [s.upper().strip() for s in request.symbols if s.strip()]
         if not symbols:
             raise HTTPException(status_code=400, detail="No symbols provided")
-        if len(symbols) > 10:
-            raise HTTPException(status_code=400, detail="Maximum 10 tickers per scan")
+        if len(symbols) > 30:
+            raise HTTPException(status_code=400, detail="Maximum 30 tickers per scan")
 
         from agents.swing_scanner import SwingScanner
         scanner = SwingScanner()
         result = scanner.scan(symbols)
+
+        # Log to trade journal
+        try:
+            from core.trade_journal import log_scan
+            log_scan(result)
+        except Exception as je:
+            print(f"[JOURNAL] Log failed: {je}")
 
         if "error" in result and not result.get("results"):
             raise HTTPException(status_code=500, detail=result["error"])
@@ -164,3 +171,18 @@ async def get_prices(request: ScanRequest):
         return {"prices": prices}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/watchlists")
+async def get_watchlists():
+    """List available preset watchlists."""
+    from core.watchlists import list_watchlists, WATCHLISTS
+    return {"watchlists": {k: {"label": v["label"], "count": len(v["tickers"])} for k, v in WATCHLISTS.items()}}
+
+
+@app.get("/api/watchlists/{name}")
+async def get_watchlist(name: str):
+    """Get tickers for a specific watchlist."""
+    from core.watchlists import get_watchlist as gw
+    wl = gw(name)
+    return {"name": name, "label": wl["label"], "tickers": wl["tickers"]}
