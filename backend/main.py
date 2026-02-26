@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from backend.schemas import AnalysisRequest, AnalysisResponse
+from backend.schemas import AnalysisRequest, AnalysisResponse, ScanRequest, ScanResponse
 import traceback
 import random
 import time
@@ -105,4 +105,62 @@ async def analyze_stock(request: AnalysisRequest):
 
     except Exception as e:
         traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/scan", response_model=ScanResponse)
+async def scan_stocks(request: ScanRequest):
+    """
+    SwingTrader AI v4.3 scan endpoint.
+    Fetches real market data via yfinance, then scores using Gemini + 5-pillar framework.
+    """
+    try:
+        symbols = [s.upper().strip() for s in request.symbols if s.strip()]
+        if not symbols:
+            raise HTTPException(status_code=400, detail="No symbols provided")
+        if len(symbols) > 10:
+            raise HTTPException(status_code=400, detail="Maximum 10 tickers per scan")
+
+        from agents.swing_scanner import SwingScanner
+        scanner = SwingScanner()
+        result = scanner.scan(symbols)
+
+        if "error" in result and not result.get("results"):
+            raise HTTPException(status_code=500, detail=result["error"])
+
+        return ScanResponse(
+            market_header=result.get("market_header", ""),
+            market_regime=result.get("market_regime", ""),
+            vix_estimate=result.get("vix_estimate", 0),
+            results=result.get("results", []),
+            error=result.get("error"),
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/prices")
+async def get_prices(request: ScanRequest):
+    """Quick price + daily change for sidebar."""
+    try:
+        import yfinance as yf
+        prices = []
+        for sym in request.symbols[:12]:
+            try:
+                tk = yf.Ticker(sym.upper().strip())
+                hist = tk.history(period="5d")
+                if len(hist) >= 2:
+                    close = float(hist["Close"].iloc[-1])
+                    prev = float(hist["Close"].iloc[-2])
+                    chg = round((close - prev) / prev * 100, 2)
+                    prices.append({"symbol": sym.upper(), "price": round(close, 2), "change": chg})
+                else:
+                    prices.append({"symbol": sym.upper(), "price": 0, "change": 0})
+            except Exception:
+                prices.append({"symbol": sym.upper(), "price": 0, "change": 0})
+        return {"prices": prices}
+    except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

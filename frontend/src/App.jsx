@@ -1,12 +1,14 @@
 import React, { useState } from 'react';
-import { Search, Activity } from 'lucide-react';
+import { Search, Activity, BarChart3 } from 'lucide-react';
 import Terminal from './components/Terminal';
 import ResultCard from './components/ResultCard';
 import LiveTicker from './components/LiveTicker';
 import TopStocks from './components/TopStocks';
+import ScanDashboard from './components/ScanDashboard';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
+  const [activeTab, setActiveTab] = useState('analyze');
   const [symbol, setSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [logs, setLogs] = useState([]);
@@ -123,7 +125,20 @@ const App = () => {
         </div>
       </header>
 
-      {/* Main */}
+      {/* Tab Bar */}
+      <div style={{ display:"flex", gap:0, padding:"0 20px", background:"#080b0f", borderBottom:"1px solid #1a2535" }}>
+        <button onClick={() => setActiveTab('analyze')} style={{ background:activeTab==='analyze'?"#0d1a2a":"transparent", color:activeTab==='analyze'?"#00d4ff":"#4a6070", border:"none", borderBottom:activeTab==='analyze'?"2px solid #00d4ff":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
+          <Activity size={14} /> COUNCIL ANALYZE
+        </button>
+        <button onClick={() => setActiveTab('scan')} style={{ background:activeTab==='scan'?"#0d1a2a":"transparent", color:activeTab==='scan'?"#00d4ff":"#4a6070", border:"none", borderBottom:activeTab==='scan'?"2px solid #00d4ff":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
+          <BarChart3 size={14} /> SWING SCAN v4.3
+        </button>
+      </div>
+
+      {/* Content */}
+      {activeTab === 'scan' ? (
+        <ScanDashboard />
+      ) : (
       <main className="main-container">
         {/* Search */}
         <form className="search-form" onSubmit={handleAnalyze}>
@@ -169,6 +184,7 @@ const App = () => {
           </div>
         </div>
       </main>
+      )}
     </div>
   );
 };
