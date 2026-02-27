@@ -48,6 +48,8 @@ const SignalTracker = () => {
       const res = await fetch(`${apiUrl}${endpoint}`, { method });
       const json = await res.json();
       setData(json);
+      // Reset countdown on manual refresh but keep auto-refresh running
+      if (refresh && autoRefresh) setCountdown(30);
     } catch (e) { console.error(e); }
     setLoading(false); setRefreshing(false);
   };
@@ -93,6 +95,11 @@ const SignalTracker = () => {
     const tickInterval = setInterval(() => setCountdown(c => c <= 1 ? 30 : c - 1), 1000);
     return () => { clearInterval(priceInterval); clearInterval(tickInterval); };
   }, [autoRefresh]);
+
+  // Auto-enable refresh when signals exist
+  useEffect(() => {
+    if (data?.active?.length > 0 && !autoRefresh) setAutoRefresh(true);
+  }, [data?.active?.length]);
 
   useEffect(() => { fetchSignals(); }, []);
 
