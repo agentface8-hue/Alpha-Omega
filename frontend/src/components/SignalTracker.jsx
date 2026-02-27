@@ -4,13 +4,15 @@ import { Activity, RefreshCw, X, TrendingUp, TrendingDown, Target } from 'lucide
 const pnlColor = v => v > 0 ? "#00ff88" : v < 0 ? "#ff4466" : "#94a3b8";
 const statusColor = s => {
   if (s === "OPEN") return "#00d4ff";
-  if (s === "TP3_HIT" || s === "TP2_HIT") return "#00ff88";
+  if (s === "TP3_HIT" || s === "TP2_HIT" || s === "TP1_HIT") return "#00ff88";
   if (s === "STOPPED_OUT") return "#ff4466";
   return "#fbbf24";
 };
 const statusLabel = s => {
   if (s === "OPEN") return "OPEN";
   if (s === "TP3_HIT") return "TP3 ✓";
+  if (s === "TP2_HIT") return "TP2 ✓";
+  if (s === "TP1_HIT") return "TP1 ✓";
   if (s === "STOPPED_OUT") return "STOPPED";
   if (s === "TIMEOUT") return "TIMEOUT";
   if (s === "MANUAL_CLOSE") return "CLOSED";
@@ -28,6 +30,7 @@ const SignalTracker = () => {
   const [countdown, setCountdown] = useState(30);
   const [autopilotLoading, setAutopilotLoading] = useState(false);
   const [autopilotResult, setAutopilotResult] = useState(null);
+  const [cryptoLoading, setCryptoLoading] = useState(false);
   const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
 
   const fetchSignals = async (refresh = false) => {
@@ -78,6 +81,19 @@ const SignalTracker = () => {
       fetchSignals(true);
     } catch (e) { alert('Autopilot error: ' + e.message); }
     setAutopilotLoading(false);
+  };
+
+  const runCryptoAutopilot = async () => {
+    setCryptoLoading(true); setAutopilotResult(null);
+    try {
+      const res = await fetch(`${apiUrl}/api/autopilot/crypto`, { method: 'POST' });
+      if (!res.ok) throw new Error(await res.text());
+      const d = await res.json();
+      setAutopilotResult(d);
+      setAutoRefresh(true);
+      fetchSignals(true);
+    } catch (e) { alert('Crypto autopilot error: ' + e.message); }
+    setCryptoLoading(false);
   };
 
   // Auto-refresh every 30 seconds
@@ -143,12 +159,18 @@ const SignalTracker = () => {
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
           <div>
             <div style={{ fontSize:14, fontWeight:"bold", color:"#e0e0e0", fontFamily:"sans-serif" }}>🤖 AUTO-PILOT</div>
-            <div style={{ fontSize:10, color:"#4a6070", fontFamily:"sans-serif", marginTop:2 }}>Scans 30 stocks → Ranks by conviction → Launches top 10 turbo signals</div>
+            <div style={{ fontSize:10, color:"#4a6070", fontFamily:"sans-serif", marginTop:2 }}>Scan → Rank → Launch top 10 turbo signals. Stocks need market hours. Crypto runs 24/7.</div>
           </div>
+          <div style={{ display:"flex", gap:10, flexWrap:"wrap" }}>
           <button onClick={runAutopilot} disabled={autopilotLoading}
             style={{ background:autopilotLoading?"#1a2535":"linear-gradient(135deg, #00d4ff, #7c3aed)", border:"none", borderRadius:8, padding:"12px 28px", color:"#fff", fontSize:14, fontWeight:"bold", fontFamily:"sans-serif", cursor:autopilotLoading?"wait":"pointer", letterSpacing:1, boxShadow:autopilotLoading?"none":"0 0 20px rgba(124,58,237,0.3)" }}>
-            {autopilotLoading ? "⏳ SCANNING 30 STOCKS..." : "🚀 LAUNCH AUTO-PILOT"}
+            {autopilotLoading ? "⏳ SCANNING 30 STOCKS..." : "🚀 STOCKS (30)"}
           </button>
+          <button onClick={runCryptoAutopilot} disabled={cryptoLoading}
+            style={{ background:cryptoLoading?"#1a2535":"linear-gradient(135deg, #f7931a, #e2761b)", border:"none", borderRadius:8, padding:"12px 28px", color:"#fff", fontSize:14, fontWeight:"bold", fontFamily:"sans-serif", cursor:cryptoLoading?"wait":"pointer", letterSpacing:1, boxShadow:cryptoLoading?"none":"0 0 20px rgba(247,147,26,0.3)" }}>
+            {cryptoLoading ? "⏳ SCANNING CRYPTO..." : "₿ CRYPTO (15)"}
+          </button>
+          </div>
         </div>
 
         {/* Autopilot Results */}

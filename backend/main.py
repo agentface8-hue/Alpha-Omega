@@ -365,3 +365,67 @@ async def run_autopilot(top_n: int = 10, watchlist: str = "full_scan"):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+CRYPTO_UNIVERSE = [
+    "BTC", "ETH", "SOL", "XRP", "ADA", "AVAX", "DOGE", "DOT",
+    "MATIC", "LINK", "NEAR", "UNI", "AAVE", "LTC", "ATOM",
+]
+
+
+@app.post("/api/autopilot/crypto")
+async def run_crypto_autopilot(top_n: int = 10):
+    """
+    CRYPTO AUTO-PILOT: Launch turbo signals for top crypto assets.
+    Crypto trades 24/7 so results show immediately.
+    """
+    try:
+        from core.signal_tracker import create_turbo_signal, get_all_signals
+        import yfinance as yf
+
+        existing = get_all_signals()
+        active_tickers = {s["ticker"] for s in existing.get("active", [])}
+
+        crypto_data = []
+        for sym in CRYPTO_UNIVERSE:
+            if sym in active_tickers:
+                continue
+            try:
+                tk = yf.Ticker(f"{sym}-USD")
+                fi = tk.fast_info
+                price = fi.get("lastPrice") or fi.get("last_price", 0)
+                if price and price > 0:
+                    crypto_data.append({"ticker": sym, "price": float(price)})
+            except Exception:
+                pass
+
+        top = crypto_data[:top_n]
+
+        launched = []
+        skipped = []
+        for c in top:
+            sig = create_turbo_signal(c["ticker"], asset_type="crypto")
+            if "error" not in sig:
+                launched.append({
+                    "ticker": c["ticker"],
+                    "conviction": 0,
+                    "heat": "CRYPTO",
+                    "entry": sig.get("entry_price", 0),
+                    "sl": sig.get("sl", 0),
+                    "tp1": sig.get("tp1", 0),
+                })
+            else:
+                skipped.append({"ticker": c["ticker"], "reason": sig["error"]})
+
+        return {
+            "status": "ok",
+            "scanned": len(CRYPTO_UNIVERSE),
+            "passed_filter": len(crypto_data),
+            "launched": launched,
+            "skipped": skipped,
+            "market_regime": "Crypto 24/7",
+        }
+
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
