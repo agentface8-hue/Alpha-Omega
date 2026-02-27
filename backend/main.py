@@ -256,26 +256,26 @@ async def reset_calibration():
 
 
 # ══════════════════════════════════════════
-# SIGNAL TRACKER ENDPOINTS
+# SIGNAL TRACKER ENDPOINTS v2.0
 # ══════════════════════════════════════════
 
 @app.get("/api/signals")
 async def get_signals():
-    """Get all signals without price refresh (fast)."""
+    """Get all signals without price refresh (fast). Includes market status."""
     from core.signal_tracker import get_all_signals
     return get_all_signals()
 
 
 @app.post("/api/signals/check")
 async def check_signals():
-    """Refresh live prices and update P&L / TP / SL status."""
+    """Refresh live prices with gap detection, MAE/MFE, staleness checks."""
     from core.signal_tracker import check_signals as cs
     return cs()
 
 
 @app.post("/api/signals/close/{signal_id}")
 async def close_signal(signal_id: str):
-    """Manually close a signal."""
+    """Manually close a signal with full audit trail."""
     from core.signal_tracker import close_signal as cls
     result = cls(signal_id)
     if not result:
@@ -292,12 +292,36 @@ async def clear_signals():
 
 @app.post("/api/signals/turbo/{symbol}")
 async def turbo_signal(symbol: str, asset_type: str = "stock"):
-    """Launch a turbo scalp signal with tight SL/TP."""
+    """Launch ATR-based turbo signal with full audit trail."""
     from core.signal_tracker import create_turbo_signal
     result = create_turbo_signal(symbol, asset_type)
     if "error" in result:
         raise HTTPException(status_code=400, detail=result["error"])
     return result
+
+
+@app.get("/api/signals/report/{signal_id}")
+async def get_signal_report(signal_id: str):
+    """Get detailed case report for a closed signal."""
+    from core.signal_tracker import get_signal_report as gsr
+    report = gsr(signal_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    return report
+
+
+@app.get("/api/signals/reports")
+async def get_all_reports():
+    """Get all case reports (most recent first)."""
+    from core.signal_tracker import get_all_reports as gar
+    return {"reports": gar()}
+
+
+@app.get("/api/signals/regime-performance")
+async def get_regime_performance():
+    """Performance breakdown by market regime."""
+    from core.signal_tracker import get_regime_performance as grp
+    return grp()
 
 
 @app.post("/api/autopilot")
@@ -329,7 +353,7 @@ async def run_autopilot(top_n: int = 10, watchlist: str = "full_scan"):
         existing = get_all_signals()
         active_tickers = {s["ticker"] for s in existing.get("active", [])}
 
-        # Step 5: Launch turbo signals
+        # Step 5: Launch turbo signals WITH full scan data (audit trail)
         launched = []
         skipped = []
         for r in top:
@@ -337,7 +361,7 @@ async def run_autopilot(top_n: int = 10, watchlist: str = "full_scan"):
             if ticker in active_tickers:
                 skipped.append({"ticker": ticker, "reason": "already active"})
                 continue
-            sig = create_turbo_signal(ticker)
+            sig = create_turbo_signal(ticker, scan_data=r)
             if "error" not in sig:
                 launched.append({
                     "ticker": ticker,
@@ -346,6 +370,8 @@ async def run_autopilot(top_n: int = 10, watchlist: str = "full_scan"):
                     "entry": sig.get("entry_price", 0),
                     "sl": sig.get("sl", 0),
                     "tp1": sig.get("tp1", 0),
+                    "atr": sig.get("atr_at_entry", 0),
+                    "target_method": sig.get("target_method", ""),
                 })
                 active_tickers.add(ticker)
             else:
@@ -413,6 +439,8 @@ async def run_crypto_autopilot(top_n: int = 10):
                     "entry": sig.get("entry_price", 0),
                     "sl": sig.get("sl", 0),
                     "tp1": sig.get("tp1", 0),
+                    "atr": sig.get("atr_at_entry", 0),
+                    "target_method": sig.get("target_method", ""),
                 })
             else:
                 skipped.append({"ticker": c["ticker"], "reason": sig["error"]})

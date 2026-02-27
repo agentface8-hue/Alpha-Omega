@@ -44,6 +44,14 @@ data/
 journal/
 create_table.py
 
+# Signals (runtime data, not code)
+signals/active_signals.json
+signals/closed_signals.json
+signals/reports/
+
+# Test files
+test_tracker_v2.py
+
 # Logs
 run.log
 logs/
