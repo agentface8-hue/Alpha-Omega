@@ -457,3 +457,17 @@ async def run_crypto_autopilot(top_n: int = 10):
     except Exception as e:
         traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Storage Management ──────────────────────────────────────
+@app.get("/api/signals/storage-status")
+async def storage_status():
+    """Check which storage backend is active."""
+    from core.signal_store import get_storage_status
+    return get_storage_status()
+
+@app.post("/api/signals/sync")
+async def sync_signals():
+    """Push local JSON data to Supabase."""
+    from core.signal_store import sync_local_to_supabase
+    return sync_local_to_supabase()

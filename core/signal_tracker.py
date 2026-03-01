@@ -10,6 +10,7 @@ from typing import Dict, Any, List, Optional
 import yfinance as yf
 import numpy as np
 import pandas as pd
+from core import signal_store as store
 
 SIGNALS_DIR = Path(__file__).parent.parent / "signals"
 SIGNALS_DIR.mkdir(exist_ok=True)
@@ -352,7 +353,7 @@ def _detect_gap_fill(signal: Dict, current_price: float, prev_close: float) -> D
 
 def record_signal(scan_result: Dict[str, Any], asset_type: str = "stock") -> List[Dict]:
     """Auto-record signals for tickers scoring >= 60% conviction. Full audit trail."""
-    active = _load(SIGNALS_FILE)
+    active = store.load_active()
     active_tickers = {s["ticker"] for s in active}
     new_signals = []
 
@@ -416,7 +417,7 @@ def record_signal(scan_result: Dict[str, Any], asset_type: str = "stock") -> Lis
         active_tickers.add(ticker)
         new_signals.append(signal)
 
-    _save(SIGNALS_FILE, active)
+    store.save_active(active)
     return new_signals
 
 
@@ -539,9 +540,9 @@ def create_turbo_signal(symbol: str, asset_type: str = "stock",
         "turbo": True,
     }
 
-    active = _load(SIGNALS_FILE)
+    active = store.load_active()
     active.append(signal)
-    _save(SIGNALS_FILE, active)
+    store.save_active(active)
     return signal
 
 
@@ -555,8 +556,8 @@ def check_signals() -> Dict[str, Any]:
     v2.0: Gap detection, realistic fills, MAE/MFE, close snapshots,
     market hours awareness, staleness checks.
     """
-    active = _load(SIGNALS_FILE)
-    closed = _load(CLOSED_FILE)
+    active = store.load_active()
+    closed = store.load_closed()
     if not active:
         return {"active": [], "closed": closed, "stats": _calc_stats(closed),
                 "market_status": _is_us_market_open()}
@@ -724,8 +725,8 @@ def check_signals() -> Dict[str, Any]:
 
     # Save
     closed.extend(newly_closed)
-    _save(SIGNALS_FILE, still_active)
-    _save(CLOSED_FILE, closed)
+    store.save_active(still_active)
+    store.save_closed(closed)
     stats = _calc_stats(closed)
 
     return {
@@ -804,9 +805,7 @@ def _save_case_report(signal: Dict):
             "analysis": _generate_trade_analysis(signal),
         }
 
-        filename = f"{signal['ticker']}_{signal['id']}_{signal['status']}.json"
-        report_path = REPORTS_DIR / filename
-        report_path.write_text(json.dumps(report, indent=2, default=str))
+        filename = store.save_report(report)
         print(f"  [REPORT] Saved: {filename}")
     except Exception as e:
         print(f"  [REPORT] Error saving report for {signal.get('ticker','?')}: {e}")
@@ -879,8 +878,8 @@ def _generate_trade_analysis(signal: Dict) -> Dict[str, Any]:
 
 def close_signal(signal_id: str, reason: str = "manual") -> Optional[Dict]:
     """Manually close a signal with full audit trail."""
-    active = _load(SIGNALS_FILE)
-    closed = _load(CLOSED_FILE)
+    active = store.load_active()
+    closed = store.load_closed()
     target = None
     remaining = []
 
@@ -914,15 +913,15 @@ def close_signal(signal_id: str, reason: str = "manual") -> Optional[Dict]:
         else:
             remaining.append(s)
 
-    _save(SIGNALS_FILE, remaining)
-    _save(CLOSED_FILE, closed)
+    store.save_active(remaining)
+    store.save_closed(closed)
     return target
 
 
 def get_all_signals() -> Dict[str, Any]:
     """Get all signals without price refresh (fast)."""
-    active = _load(SIGNALS_FILE)
-    closed = _load(CLOSED_FILE)
+    active = store.load_active()
+    closed = store.load_closed()
     return {
         "active": active,
         "closed": closed,
@@ -933,32 +932,23 @@ def get_all_signals() -> Dict[str, Any]:
 
 def clear_all() -> Dict[str, str]:
     """Reset all signals (for testing)."""
-    _save(SIGNALS_FILE, [])
-    _save(CLOSED_FILE, [])
+    store.clear_all()
     return {"status": "cleared"}
 
 
 def get_signal_report(signal_id: str) -> Optional[Dict]:
     """Retrieve a case report for a specific signal."""
-    for f in REPORTS_DIR.glob(f"*_{signal_id}_*.json"):
-        return json.loads(f.read_text())
-    return None
+    return store.load_report(signal_id)
 
 
 def get_all_reports() -> List[Dict]:
     """Get all case reports."""
-    reports = []
-    for f in sorted(REPORTS_DIR.glob("*.json"), reverse=True):
-        try:
-            reports.append(json.loads(f.read_text()))
-        except Exception:
-            pass
-    return reports
+    return store.load_all_reports()
 
 
 def get_regime_performance() -> Dict[str, Any]:
     """Analyze performance broken down by market regime."""
-    closed = _load(CLOSED_FILE)
+    closed = store.load_closed()
     if not closed:
         return {"regimes": {}}
 
