@@ -471,3 +471,19 @@ async def sync_signals():
     """Push local JSON data to Supabase."""
     from core.signal_store import sync_local_to_supabase
     return sync_local_to_supabase()
+
+@app.get("/api/signals/storage-debug")
+async def storage_debug():
+    """Debug Supabase connection."""
+    import os
+    url = os.environ.get("SUPABASE_URL", "")
+    key = os.environ.get("SUPABASE_ANON_KEY", "")
+    result = {"url_set": bool(url), "key_set": bool(key), "url_prefix": url[:30] if url else ""}
+    try:
+        from supabase import create_client
+        sb = create_client(url, key)
+        sb.table("signals").select("id").limit(1).execute()
+        result["connection"] = "OK"
+    except Exception as e:
+        result["connection"] = f"FAIL: {str(e)[:200]}"
+    return result
