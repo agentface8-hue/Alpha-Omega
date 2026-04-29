@@ -9,9 +9,11 @@ import BacktestDashboard from './components/BacktestDashboard';
 import SignalTracker from './components/SignalTracker';
 import ChartPanel from './components/ChartPanel';
 import AlphaMegaDashboard from './components/AlphaMegaDashboard';
+import LoginScreen from './components/LoginScreen';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
+  const [authed, setAuthed] = useState(() => sessionStorage.getItem('ao_auth') === '1');
   const [activeTab, setActiveTab] = useState('analyze');
   const [symbol, setSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -109,6 +111,8 @@ const App = () => {
 
   return (
     <div>
+      {!authed && <LoginScreen onLogin={() => setAuthed(true)} />}
+      {authed && (<>
       {/* Live Ticker Bar */}
       <LiveTicker />
 
@@ -205,7 +209,8 @@ const App = () => {
         </div>
       </main>
       )}
-    </div>
+    </>)}
+  </div>
   );
 };
 
