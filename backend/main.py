@@ -24,7 +24,9 @@ DEMO_SCENARIOS = {
         "executioner_decision": "BUY — Enter long position. Allocate 4.2% of portfolio via Kelly Criterion. Set stop-loss at -3.5% below entry. Target: +12% upside over 30-day horizon.",
         "historian": "Price has broken above the 50-day and 200-day moving averages with a Golden Cross forming. RSI at 62 indicates strong momentum without overbought conditions. Volume profile confirms institutional accumulation over the past 5 sessions. MACD histogram expanding bullishly.",
         "newsroom": "Sentiment is overwhelmingly positive. 3 major analyst upgrades in the past week. Social media buzz index at 8.2/10. No significant negative catalysts detected. Earnings whisper numbers suggest a potential beat next quarter.",
-        "macro": "10Y yield at 4.12%, declining from 4.35% peak. VIX at 14.2, well below fear threshold. Yield curve normalizing — positive for risk assets. Fed policy: rate cuts expected in coming meetings. No major geopolitical headwinds."
+        "macro": "10Y yield at 4.12%, declining from 4.35% peak. VIX at 14.2, well below fear threshold. Yield curve normalizing — positive for risk assets. Fed policy: rate cuts expected in coming meetings. No major geopolitical headwinds.",
+        "trade_params": {"entry_low": 329.56, "entry_high": 334.55, "sl": 312.62, "sl_note": "ATR triple-guard", "tp1": 373.43, "tp2": 412.18, "rr": 2.0, "qty": 3, "risk_usd": 75},
+        "mtf_analysis": {"tf_1h": "BULL", "tf_4h": "BULL", "tf_1d": "BULL", "tf_1w": "BULL"}
     },
     "bearish": {
         "consensus_view": "Bearish divergence detected. Price action weakening despite market strength, negative sentiment shift from insider selling reports, and macro headwinds from rising yields creating unfavorable conditions.",
@@ -32,7 +34,9 @@ DEMO_SCENARIOS = {
         "executioner_decision": "HALT — Do not enter. Risk/reward unfavorable. Multiple sell signals detected. If holding, tighten stop-loss to -2% and reduce position by 50%. Wait for mean reversion signal before re-entry.",
         "historian": "Bearish divergence on RSI — price making higher highs while RSI makes lower highs. Volume declining on up-days. Price rejected at resistance for the 3rd time. MACD crossover to the downside. Support at the 200-day MA is the last defense.",
         "newsroom": "Insider selling reported — CEO and CFO sold combined $12M in shares. Mixed analyst sentiment with 2 downgrades. Short interest rising to 8.4% of float. Social sentiment shifting negative on Reddit and Twitter.",
-        "macro": "10Y yield spiking to 4.52%, creating headwinds for growth stocks. VIX elevated at 22.8. Dollar strengthening, negative for multinational earnings. Fed rhetoric hawkish — 'higher for longer' narrative dominant."
+        "macro": "10Y yield spiking to 4.52%, creating headwinds for growth stocks. VIX elevated at 22.8. Dollar strengthening, negative for multinational earnings. Fed rhetoric hawkish — 'higher for longer' narrative dominant.",
+        "trade_params": {"entry_low": 155.20, "entry_high": 158.50, "sl": 164.80, "sl_note": "above resistance", "tp1": 141.30, "tp2": 134.50, "rr": 1.8, "qty": 5, "risk_usd": 95},
+        "mtf_analysis": {"tf_1h": "BEAR", "tf_4h": "BEAR", "tf_1d": "BEAR", "tf_1w": "NEUTRAL"}
     },
     "neutral": {
         "consensus_view": "Mixed signals across all dimensions. Technical indicators are range-bound, sentiment is neutral with no strong catalysts, and macro environment is transitional. No clear edge for directional positioning.",
@@ -40,7 +44,9 @@ DEMO_SCENARIOS = {
         "executioner_decision": "HOLD — No action. Confidence below threshold (0.51 < 0.85). Signals are contradictory. Monitor for a decisive breakout above resistance or breakdown below support before committing capital.",
         "historian": "Price consolidating in a tight range between support ($142) and resistance ($158). Bollinger Bands squeezing — a big move is brewing but direction is unclear. Volume is average. RSI flat at 50, perfectly neutral.",
         "newsroom": "No major catalysts on the horizon. Earnings are 6 weeks out. Analyst consensus is 'Hold' with a median price target at current levels. Social media activity is muted.",
-        "macro": "10Y yield stable at 4.25%. VIX at 17.5 — neither complacent nor fearful. Market awaiting next FOMC meeting for direction. Economic data mixed — strong jobs but cooling PMI."
+        "macro": "10Y yield stable at 4.25%. VIX at 17.5 — neither complacent nor fearful. Market awaiting next FOMC meeting for direction. Economic data mixed — strong jobs but cooling PMI.",
+        "trade_params": None,
+        "mtf_analysis": {"tf_1h": "NEUTRAL", "tf_4h": "BULL", "tf_1d": "BEAR", "tf_1w": "NEUTRAL"}
     }
 }
 
@@ -63,7 +69,9 @@ def get_demo_response(symbol: str) -> AnalysisResponse:
             "historian": scenario["historian"],
             "newsroom": scenario["newsroom"],
             "macro": scenario["macro"]
-        }
+        },
+        trade_params=scenario.get("trade_params"),
+        mtf_analysis=scenario.get("mtf_analysis")
     )
 
 
@@ -487,3 +495,189 @@ async def storage_debug():
     except Exception as e:
         result["connection"] = f"FAIL: {str(e)[:200]}"
     return result
+
+
+# ── Chart Data ──────────────────────────────────────────────
+@app.get("/api/chart/{symbol}")
+async def get_chart_data(symbol: str, interval: str = "1d"):
+    """Return OHLC candles + S/R levels + linear regression channel for charting."""
+    try:
+        import yfinance as yf
+        import numpy as np
+
+        ticker = yf.Ticker(symbol.upper())
+        if interval == "1w":
+            hist = ticker.history(period="2y", interval="1wk")
+        else:
+            hist = ticker.history(period="6mo", interval="1d")
+
+        if hist.empty:
+            raise HTTPException(status_code=404, detail=f"No data for {symbol}")
+
+        hist = hist.tail(60)
+        candles = []
+        for ts, row in hist.iterrows():
+            candles.append({
+                "t": ts.strftime("%Y-%m-%d"),
+                "o": round(float(row["Open"]), 2),
+                "h": round(float(row["High"]), 2),
+                "l": round(float(row["Low"]), 2),
+                "c": round(float(row["Close"]), 2),
+                "v": int(row["Volume"])
+            })
+
+        closes = hist["Close"].values
+        highs  = hist["High"].values
+        lows   = hist["Low"].values
+
+        sr_levels = []
+        for i in range(2, len(closes) - 2):
+            if highs[i] > highs[i-1] and highs[i] > highs[i-2] and highs[i] > highs[i+1] and highs[i] > highs[i+2]:
+                sr_levels.append({"level": round(float(highs[i]), 2), "type": "resistance"})
+            if lows[i] < lows[i-1] and lows[i] < lows[i-2] and lows[i] < lows[i+1] and lows[i] < lows[i+2]:
+                sr_levels.append({"level": round(float(lows[i]), 2), "type": "support"})
+
+        filtered_sr = []
+        for lvl in sr_levels:
+            if not any(abs(l["level"] - lvl["level"]) / max(lvl["level"], 1) < 0.005 for l in filtered_sr):
+                filtered_sr.append(lvl)
+
+        x = np.arange(len(closes))
+        m, b = np.polyfit(x, closes, 1)
+        std = float(np.std(closes - (m * x + b)))
+        n = len(closes) - 1
+        channel = {
+            "upper": [round(float(b + 2*std), 2), round(float(m*n + b + 2*std), 2)],
+            "mid":   [round(float(b), 2),          round(float(m*n + b), 2)],
+            "lower": [round(float(b - 2*std), 2),  round(float(m*n + b - 2*std), 2)]
+        }
+
+        return {"symbol": symbol.upper(), "interval": interval, "candles": candles,
+                "sr_levels": filtered_sr[:8], "channel": channel}
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ── Sector Heat ─────────────────────────────────────────────
+@app.get("/api/sectors/heat")
+async def sector_heat():
+    """Score all 11 GICS sectors via their benchmark ETF using the conviction engine."""
+    try:
+        from core.watchlists import SECTOR_WATCHLISTS
+        from agents.swing_scanner import SwingScanner
+        scanner = SwingScanner()
+        etfs = [v["etf"] for v in SECTOR_WATCHLISTS.values()]
+        results = scanner.scan(etfs)
+        scored = []
+        for key, meta in SECTOR_WATCHLISTS.items():
+            etf = meta["etf"]
+            match = next((r for r in results if r.get("ticker") == etf and not r.get("hard_fail")), None)
+            score = match["conviction_pct"] if match else 0
+            trend = match.get("trend", "—") if match else "—"
+            scored.append({
+                "key": key, "label": meta["label"], "etf": etf,
+                "score": score, "trend": trend,
+                "heat": "HOT" if score >= 70 else "WARM" if score >= 55 else "COLD"
+            })
+        scored.sort(key=lambda x: x["score"], reverse=True)
+        return {"sectors": scored}
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/api/sectors/watchlist/{sector_key}")
+async def sector_watchlist(sector_key: str):
+    """Get tickers for a specific sector."""
+    from core.watchlists import SECTOR_WATCHLISTS
+    if sector_key not in SECTOR_WATCHLISTS:
+        raise HTTPException(status_code=404, detail=f"Sector '{sector_key}' not found")
+    s = SECTOR_WATCHLISTS[sector_key]
+    return {"key": sector_key, "label": s["label"], "etf": s["etf"], "tickers": s["tickers"]}
+
+
+# ── Alpha-Mega Dashboard ─────────────────────────────────────
+import time as _time_mod
+_ALPHA_MEGA_CACHE = {"ts": 0.0, "data": None}
+_CACHE_TTL = 86400  # 24 hours
+
+@app.get("/api/alpha-mega")
+async def alpha_mega(lookback_days: int = 30):
+    """Top 20 stocks scored by conviction+MTF+patterns, market cap >$10B, daily cached."""
+    global _ALPHA_MEGA_CACHE
+    try:
+        from core.watchlists import SECTOR_WATCHLISTS
+        from agents.swing_scanner import SwingScanner
+        import yfinance as yf
+
+        now = _time_mod.time()
+
+        # Rebuild scan only if cache stale
+        if now - _ALPHA_MEGA_CACHE["ts"] > _CACHE_TTL or not _ALPHA_MEGA_CACHE["data"]:
+            # Universe: top 5 tickers per sector
+            candidates = {}
+            for key, meta in SECTOR_WATCHLISTS.items():
+                for t in meta["tickers"][:5]:
+                    if t not in candidates:
+                        candidates[t] = key
+
+            scanner = SwingScanner()
+            raw = scanner.scan(list(candidates.keys()))
+
+            # Filter: no hard fail, market cap >= $10B, has conviction score
+            filtered = [r for r in raw
+                        if not r.get("hard_fail")
+                        and (r.get("mkt_cap_b") or 0) >= 10
+                        and r.get("conviction_pct", 0) > 0]
+
+            # Compute alpha score: conviction 40% + MTF 30% + trend 20% + vol 10%
+            for r in filtered:
+                tf = r.get("tf_breakdown") or {}
+                bull_tfs = sum(1 for k in ["tf_65m","tf_240m","tf_daily","tf_weekly"] if tf.get(k) == "BULL")
+                mtf_score = (bull_tfs / 4) * 100
+                trend_sc  = 80 if r.get("trend") == "BULL" else 20
+                vol_sc    = min(100, (r.get("vol_ratio") or 1) * 40)
+                r["alpha_score"] = round(r["conviction_pct"]*0.4 + mtf_score*0.3 + trend_sc*0.2 + vol_sc*0.1, 1)
+                r["sector_key"]  = candidates.get(r["ticker"], "")
+
+            filtered.sort(key=lambda x: x["alpha_score"], reverse=True)
+            _ALPHA_MEGA_CACHE["ts"]   = now
+            _ALPHA_MEGA_CACHE["data"] = filtered[:20]
+
+        top20 = _ALPHA_MEGA_CACHE["data"] or []
+
+        # P&L always fresh (cheap yfinance call)
+        period_map = {30:"1mo", 90:"3mo", 180:"6mo", 360:"1y"}
+        yf_period  = period_map.get(lookback_days, "1mo")
+        results = []
+        for r in top20:
+            pnl_pct = 0.0
+            try:
+                hist = yf.Ticker(r["ticker"]).history(period=yf_period)
+                if len(hist) >= 2:
+                    pnl_pct = round((hist["Close"].iloc[-1] - hist["Close"].iloc[0]) / hist["Close"].iloc[0] * 100, 2)
+            except:
+                pass
+            results.append({**r, "pnl_pct": pnl_pct})
+
+        # Portfolio: top 5 diversified across sectors
+        seen_sectors, portfolio = set(), []
+        for r in results:
+            sk = r.get("sector_key", "")
+            if sk not in seen_sectors and len(portfolio) < 5:
+                portfolio.append(r["ticker"])
+                seen_sectors.add(sk)
+
+        return {
+            "top20": results, "portfolio": portfolio,
+            "lookback_days": lookback_days,
+            "last_updated": int(_ALPHA_MEGA_CACHE["ts"]),
+            "total_scanned": len(_ALPHA_MEGA_CACHE["data"] or [])
+        }
+    except Exception as e:
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=str(e))

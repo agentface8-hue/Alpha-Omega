@@ -7,6 +7,8 @@ import TopStocks from './components/TopStocks';
 import ScanDashboard from './components/ScanDashboard';
 import BacktestDashboard from './components/BacktestDashboard';
 import SignalTracker from './components/SignalTracker';
+import ChartPanel from './components/ChartPanel';
+import AlphaMegaDashboard from './components/AlphaMegaDashboard';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
@@ -141,6 +143,9 @@ const App = () => {
         <button onClick={() => setActiveTab('tracker')} style={{ background:activeTab==='tracker'?"#0d1a2a":"transparent", color:activeTab==='tracker'?"#c084fc":"#4a6070", border:"none", borderBottom:activeTab==='tracker'?"2px solid #c084fc":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
           <Activity size={14} /> SIGNAL TRACKER
         </button>
+        <button onClick={() => setActiveTab('alphamega')} style={{ background:activeTab==='alphamega'?"#0d1a2a":"transparent", color:activeTab==='alphamega'?"#c084fc":"#4a6070", border:"none", borderBottom:activeTab==='alphamega'?"2px solid #c084fc":"2px solid transparent", padding:"10px 20px", fontSize:12, fontWeight:"bold", fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:6, letterSpacing:1 }}>
+          <BarChart3 size={14} /> ALPHA-MEGA
+        </button>
       </div>
 
       {/* Content */}
@@ -150,6 +155,8 @@ const App = () => {
         <BacktestDashboard />
       ) : activeTab === 'tracker' ? (
         <SignalTracker />
+      ) : activeTab === 'alphamega' ? (
+        <AlphaMegaDashboard />
       ) : (
       <main className="main-container">
         {/* Search */}
@@ -188,6 +195,7 @@ const App = () => {
             )}
 
             <ResultCard result={result} />
+            <ChartPanel symbol={result ? result.symbol : symbol} tradeParams={result?.trade_params} />
           </div>
 
           {/* Right: Top Stocks */}

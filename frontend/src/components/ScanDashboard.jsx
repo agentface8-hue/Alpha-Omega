@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Search, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw, Flame, BarChart2 } from 'lucide-react';
 
 // ── Color helpers (from SwingTrader v4.3) ──
 const convColor = p => p >= 75 ? "#00ff88" : p >= 60 ? "#fbbf24" : p >= 45 ? "#94a3b8" : "#ff4466";
@@ -55,12 +55,36 @@ const ScanDashboard = () => {
   const [error, setError] = useState(null);
   const [expanded, setExpanded] = useState(new Set());
   const [watchlists, setWatchlists] = useState(null);
+  const [sectorHeat, setSectorHeat] = useState(null);
+  const [heatLoading, setHeatLoading] = useState(false);
+  const [activeSector, setActiveSector] = useState(null);
 
   // Fetch watchlists on mount
   React.useEffect(() => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
     fetch(`${apiUrl}/api/watchlists`).then(r => r.json()).then(d => setWatchlists(d.watchlists)).catch(() => {});
   }, []);
+
+  const fetchSectorHeat = async () => {
+    setHeatLoading(true);
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    try {
+      const res = await fetch(`${apiUrl}/api/sectors/heat`);
+      const d = await res.json();
+      setSectorHeat(d.sectors || []);
+    } catch (e) { setSectorHeat([]); }
+    setHeatLoading(false);
+  };
+
+  const loadSector = async (key) => {
+    setActiveSector(key);
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
+    try {
+      const res = await fetch(`${apiUrl}/api/sectors/watchlist/${key}`);
+      const d = await res.json();
+      setTickers(d.tickers.join(', '));
+    } catch (e) {}
+  };
 
   const loadWatchlist = async (name) => {
     const apiUrl = import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000';
@@ -117,6 +141,60 @@ const ScanDashboard = () => {
               <span style={{ color:regimeColor(data.market_regime), fontSize:11, fontWeight:"bold" }}>{data.market_regime}</span>
               {data.vix_estimate > 0 && <span style={{ color:"#4a6070", fontSize:9, marginLeft:8 }}>VIX {data.vix_estimate}</span>}
             </div>
+          </div>
+        )}
+      </div>
+
+      {/* Sector Heat Map */}
+      <div style={{ background:"#0a0f18", border:"1px solid #1a2535", borderRadius:8, padding:"12px 14px", marginBottom:12 }}>
+        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+          <div style={{ display:"flex", alignItems:"center", gap:6, color:"#fbbf24", fontSize:10, fontWeight:"bold", fontFamily:"sans-serif", letterSpacing:1 }}>
+            <Flame size={12} /> SECTOR HEAT
+          </div>
+          <button onClick={fetchSectorHeat} disabled={heatLoading}
+            style={{ background:"#0d1520", border:"1px solid #1a2535", borderRadius:4, padding:"3px 10px",
+              color:"#00d4ff", fontSize:10, fontFamily:"sans-serif", cursor:"pointer", display:"flex", alignItems:"center", gap:4 }}>
+            {heatLoading ? <RefreshCw size={10} className="spin" /> : <BarChart2 size={10} />}
+            {heatLoading ? 'Scoring...' : 'Score Sectors'}
+          </button>
+        </div>
+
+        {/* 11 Sector buttons */}
+        {[
+          ["information_technology","💻 Info Tech"],["financials","🏦 Financials"],["health_care","💊 Health Care"],
+          ["industrials","⚙️ Industrials"],["consumer_discretionary","🛍 Cons. Disc."],["consumer_staples","🛒 Cons. Staples"],
+          ["energy","⛽ Energy"],["communication_services","📡 Comm. Svcs"],["utilities","⚡ Utilities"],
+          ["materials","🪨 Materials"],["real_estate","🏢 Real Estate"]
+        ].map(([key, label]) => {
+          const heat = sectorHeat?.find(s => s.key === key);
+          const isActive = activeSector === key;
+          const heatC = heat ? (heat.heat === "HOT" ? "#00ff88" : heat.heat === "WARM" ? "#fbbf24" : "#ff4466") : "#4a6070";
+          return (
+            <button key={key} onClick={() => loadSector(key)}
+              style={{ background: isActive ? "#1a2535" : "#080c14", border:`1px solid ${isActive ? heatC : "#1a2535"}`,
+                borderRadius:5, padding:"5px 10px", color: isActive ? heatC : "#94a3b8",
+                fontSize:10, fontFamily:"sans-serif", cursor:"pointer", margin:"2px 3px", display:"inline-flex", alignItems:"center", gap:5 }}>
+              {label}
+              {heat && <span style={{ color:heatC, fontWeight:"bold", fontSize:9 }}>{heat.score}%</span>}
+            </button>
+          );
+        })}
+
+        {/* Heat ranking */}
+        {sectorHeat?.length > 0 && (
+          <div style={{ marginTop:10, display:"flex", gap:5, flexWrap:"wrap" }}>
+            {sectorHeat.map((s, i) => {
+              const c = s.heat === "HOT" ? "#00ff88" : s.heat === "WARM" ? "#fbbf24" : "#ff4466";
+              return (
+                <div key={s.key} onClick={() => loadSector(s.key)}
+                  style={{ background:`${c}10`, border:`1px solid ${c}33`, borderRadius:5, padding:"4px 10px",
+                    cursor:"pointer", display:"flex", alignItems:"center", gap:6 }}>
+                  <span style={{ color:"#4a6070", fontSize:8, fontFamily:"sans-serif" }}>#{i+1}</span>
+                  <span style={{ color:"#c9d8e8", fontSize:10, fontFamily:"sans-serif" }}>{s.etf}</span>
+                  <span style={{ color:c, fontWeight:"bold", fontSize:11 }}>{s.score}%</span>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

@@ -15,6 +15,8 @@ class AnalysisResponse(BaseModel):
     confidence_score: float
     executioner_decision: str
     full_report: Dict[str, Any]
+    trade_params: Optional[Dict[str, Any]] = None
+    mtf_analysis: Optional[Dict[str, str]] = None
 
 
 class ScanRequest(BaseModel):
