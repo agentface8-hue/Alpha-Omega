@@ -22,7 +22,7 @@ const LoginScreen = ({ onLogin }) => {
     setLoading(true); setError('');
     const hash = await sha256(pass);
     if (user === VALID_USER && hash === VALID_HASH) {
-      sessionStorage.setItem('ao_auth', '1');
+      localStorage.setItem('ao_auth', '1');
       onLogin();
     } else {
       setError('Invalid username or password.');

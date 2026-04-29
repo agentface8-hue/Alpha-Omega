@@ -13,7 +13,7 @@ import LoginScreen from './components/LoginScreen';
 import { playThinkingSound, playSuccessSound, playErrorSound } from './utils/sounds';
 
 const App = () => {
-  const [authed, setAuthed] = useState(() => sessionStorage.getItem('ao_auth') === '1');
+  const [authed, setAuthed] = useState(() => localStorage.getItem('ao_auth') === '1');
   const [activeTab, setActiveTab] = useState('analyze');
   const [symbol, setSymbol] = useState('');
   const [isLoading, setIsLoading] = useState(false);
